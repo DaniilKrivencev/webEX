@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}{{ collection.name }} — Электронная библиотека{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-purple-light">Главная</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('collections.index') }}" class="text-purple-light">Мои подборки</a></li>
+    <li class="breadcrumb-item active text-secondary">{{ collection.name }}</li>
+  </ol>
+</nav>
+
+<div class="mb-4">
+  <h1 class="page-title mb-1">
+    <i class="bi bi-collection-fill me-2" style="font-size:1.6rem;color:var(--purple-light)"></i>{{ collection.name }}
+  </h1>
+  <p class="text-secondary">{{ collection.books|length }} книг в подборке</p>
+</div>
+
+{% if collection.books %}
+<div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+  {% for book in collection.books %}
+  <div class="col">
+    <div class="book-card h-100">
+      <div class="book-cover-wrap">
+        {% if book.cover %}
+        <img src="{{ url_for('books.serve_cover', filename=book.cover.filename) }}" alt="{{ book.title }}" loading="lazy">
+        {% else %}
+        <div class="book-cover-placeholder"><i class="bi bi-book"></i></div>
+        {% endif %}
+      </div>
+      <div class="book-body">
+        <div class="book-title">{{ book.title }}</div>
+        <div class="book-author">{{ book.author }}</div>
+        <div class="d-flex flex-wrap gap-1 mb-2">
+          {% for genre in book.genres %}
+          <span class="genre-badge">{{ genre.name }}</span>
+          {% endfor %}
+        </div>
+        <div class="book-stats d-flex gap-3">
+          <span><i class="bi bi-calendar3 text-purple me-1"></i>{{ book.year }}</span>
+          <span>
+            <i class="bi bi-star-fill star-on me-1"></i>
+            {% if book.average_rating is not none %}{{ '%.1f'|format(book.average_rating) }}{% else %}—{% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="book-actions">
+        <a href="{{ url_for('books.view', book_id=book.id) }}" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-eye me-1"></i>Просмотр
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <i class="bi bi-book"></i>
+  <h4>Подборка пуста</h4>
+  <p>Добавляйте книги через кнопку «В подборку» на странице книги</p>
+</div>
+{% endif %}
+{% endblock %}

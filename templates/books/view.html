@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% block title %}{{ book.title }} — Электронная библиотека{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-purple-light">Главная</a></li>
+    <li class="breadcrumb-item active text-secondary">{{ book.title }}</li>
+  </ol>
+</nav>
+
+{# ===== Book Detail ===== #}
+<div class="row g-4 mb-5">
+  {# Cover #}
+  <div class="col-md-3 col-sm-4">
+    <div class="book-view-cover">
+      {% if book.cover %}
+      <img src="{{ url_for('books.serve_cover', filename=book.cover.filename) }}"
+           alt="Обложка — {{ book.title }}">
+      {% else %}
+      <div class="book-cover-placeholder" style="aspect-ratio:2/3">
+        <i class="bi bi-book" style="font-size:5rem"></i>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Info #}
+  <div class="col-md-9 col-sm-8">
+    <h1 class="book-detail-title mb-1">{{ book.title }}</h1>
+    <p class="book-detail-author mb-3">
+      <i class="bi bi-person-fill me-1"></i>{{ book.author }}
+    </p>
+
+    {# Meta chips #}
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      <span class="meta-chip"><i class="bi bi-calendar3"></i>{{ book.year }}</span>
+      <span class="meta-chip"><i class="bi bi-building"></i>{{ book.publisher }}</span>
+      <span class="meta-chip"><i class="bi bi-file-text"></i>{{ book.pages }} стр.</span>
+      {% if book.average_rating is not none %}
+      <span class="meta-chip">
+        <i class="bi bi-star-fill" style="color:#f59e0b"></i>
+        {{ '%.1f'|format(book.average_rating) }} / 5
+      </span>
+      {% else %}
+      <span class="meta-chip"><i class="bi bi-star"></i>Нет оценок</span>
+      {% endif %}
+      <span class="meta-chip"><i class="bi bi-chat-left-text"></i>{{ book.reviews_count }} рецензий</span>
+    </div>
+
+    {# Genres #}
+    <div class="d-flex flex-wrap gap-1 mb-4">
+      {% for genre in book.genres %}
+      <span class="genre-badge">{{ genre.name }}</span>
+      {% endfor %}
+    </div>
+
+    {# Admin/mod action buttons #}
+    {% if current_user.is_authenticated %}
+    <div class="d-flex gap-2 flex-wrap mb-4">
+      {% if current_user.is_admin or current_user.is_moderator %}
+      <a href="{{ url_for('books.edit', book_id=book.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil-square me-1"></i>Редактировать
+      </a>
+      {% endif %}
+      {% if current_user.is_admin %}
+      <button class="btn btn-outline-danger btn-sm"
+              onclick="confirmDelete({{ book.id }}, {{ book.title | tojson }})">
+        <i class="bi bi-trash3 me-1"></i>Удалить
+      </button>
+      {% endif %}
+      {% if current_user.is_user %}
+      <button class="btn btn-outline-secondary btn-sm"
+              data-bs-toggle="modal" data-bs-target="#addCollectionModal">
+        <i class="bi bi-collection-fill me-1"></i>В подборку
+      </button>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# Description rendered from markdown #}
+    <div class="book-desc">
+      {{ book.description | markdown | safe }}
+    </div>
+  </div>
+</div>
+
+<hr class="border-secondary">
+
+{# ===== Reviews Section ===== #}
+<div class="mt-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <h2 style="font-family:'Playfair Display',serif;font-size:1.5rem;color:var(--text)">
+      Рецензии
+      <span class="text-secondary fw-normal fs-6">({{ book.reviews|length }})</span>
+    </h2>
+    {% if current_user.is_authenticated and not user_review %}
+    <a href="{{ url_for('reviews.add', book_id=book.id) }}" class="btn btn-purple btn-sm">
+      <i class="bi bi-pen me-1"></i>Написать рецензию
+    </a>
+    {% endif %}
+  </div>
+
+  {# User's own review #}
+  {% if user_review %}
+  <div class="review-card own mb-3">
+    <div class="d-flex align-items-start gap-3">
+      <div class="review-avatar flex-shrink-0">
+        {{ current_user.first_name[0] }}{{ current_user.last_name[0] }}
+      </div>
+      <div class="flex-grow-1 min-w-0">
+        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+          <span class="fw-semibold text-white">{{ current_user.full_name }}</span>
+          <span class="badge rounded-pill" style="background:var(--purple);font-size:.7rem">Ваша рецензия</span>
+          <span class="text-secondary" style="font-size:.78rem">
+            {{ user_review.created_at.strftime('%d.%m.%Y') }}
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-1 mb-2">
+          {% for i in range(1, 6) %}
+          <i class="bi bi-star{% if i <= user_review.rating %}-fill star-on{% else %} star-off{% endif %}"></i>
+          {% endfor %}
+          <span class="text-secondary ms-1" style="font-size:.82rem">{{ user_review.rating }}/5</span>
+        </div>
+        <div class="book-desc" style="font-size:.9rem">
+          {{ user_review.text | markdown | safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# Other reviews #}
+  {% set other_reviews = [] %}
+  {% for r in book.reviews %}
+    {% if not current_user.is_authenticated or r.user_id != current_user.id %}
+      {% set _ = other_reviews.append(r) %}
+    {% endif %}
+  {% endfor %}
+
+  {% if other_reviews %}
+  <div class="d-flex flex-column gap-3">
+    {% for review in other_reviews %}
+    <div class="review-card">
+      <div class="d-flex align-items-start gap-3">
+        <div class="review-avatar flex-shrink-0">
+          {{ review.user.first_name[0] }}{{ review.user.last_name[0] }}
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+            <span class="fw-semibold text-white">{{ review.user.full_name }}</span>
+            <span class="text-secondary" style="font-size:.78rem">
+              {{ review.created_at.strftime('%d.%m.%Y') }}
+            </span>
+          </div>
+          <div class="d-flex align-items-center gap-1 mb-2">
+            {% for i in range(1, 6) %}
+            <i class="bi bi-star{% if i <= review.rating %}-fill star-on{% else %} star-off{% endif %}"></i>
+            {% endfor %}
+            <span class="text-secondary ms-1" style="font-size:.82rem">{{ review.rating }}/5</span>
+          </div>
+          <div class="book-desc" style="font-size:.9rem">
+            {{ review.text | markdown | safe }}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% elif not user_review %}
+  <div class="empty-state py-4">
+    <i class="bi bi-chat-left"></i>
+    <h4>Рецензий пока нет</h4>
+    <p class="mb-0">Будьте первым, кто оставит рецензию!</p>
+  </div>
+  {% endif %}
+</div>
+
+{# ===== Delete Modal ===== #}
+{% if current_user.is_authenticated and current_user.is_admin %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i>Удаление книги
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">
+          Вы уверены, что хотите удалить книгу <strong id="deleteBookName"></strong>?
+        </p>
+        <p class="text-secondary mb-0" style="font-size:.85rem">
+          Это действие нельзя отменить. Все рецензии и обложка будут удалены.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Нет
+        </button>
+        <form id="deleteForm" method="post">
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash3 me-1"></i>Да, удалить
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{# ===== Add to Collection Modal ===== #}
+{% if current_user.is_authenticated and current_user.is_user %}
+<div class="modal fade" id="addCollectionModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-collection text-purple me-2"></i>Добавить в подборку
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{{ url_for('collections.add_book') }}" id="addToCollectionForm">
+          <input type="hidden" name="book_id" value="{{ book.id }}">
+          {% if user_collections %}
+          <label class="form-label" for="sel_collection">Выберите подборку</label>
+          <select name="collection_id" id="sel_collection" class="form-select">
+            {% for col in user_collections %}
+            <option value="{{ col.id }}">
+              {{ col.name }} ({{ col.books|length }} книг)
+            </option>
+            {% endfor %}
+          </select>
+          {% else %}
+          <p class="text-secondary mb-0">
+            У вас нет подборок.
+            <a href="{{ url_for('collections.index') }}" class="text-purple-light">Создайте первую</a>.
+          </p>
+          {% endif %}
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Отмена
+        </button>
+        {% if user_collections %}
+        <button class="btn btn-purple"
+                onclick="document.getElementById('addToCollectionForm').submit()">
+          <i class="bi bi-plus-circle me-1"></i>Добавить
+        </button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

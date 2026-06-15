@@ -1,0 +1,83 @@
+{#
+  Macro: book_form
+  Parameters:
+    genres           — list of all Genre objects
+    selected_genre_ids — list of genre id strings that should be pre-selected
+    form_data        — request.form or {} (used to restore text fields on error)
+    book             — Book object or None (used for default field values on edit)
+    show_cover       — True on add page, False on edit page
+#}
+{% macro book_form(genres, selected_genre_ids, form_data, book=None, show_cover=False) %}
+
+<div class="row g-3">
+  {# Title #}
+  <div class="col-12">
+    <label class="form-label" for="f_title">Название <span class="text-danger">*</span></label>
+    <input id="f_title" name="title" type="text" class="form-control"
+           value="{{ form_data.get('title') if form_data else (book.title if book else '') }}"
+           placeholder="Введите название книги" required>
+  </div>
+
+  {# Author #}
+  <div class="col-12">
+    <label class="form-label" for="f_author">Автор <span class="text-danger">*</span></label>
+    <input id="f_author" name="author" type="text" class="form-control"
+           value="{{ form_data.get('author') if form_data else (book.author if book else '') }}"
+           placeholder="Фамилия Имя Отчество" required>
+  </div>
+
+  {# Year + Pages #}
+  <div class="col-sm-6">
+    <label class="form-label" for="f_year">Год издания <span class="text-danger">*</span></label>
+    <input id="f_year" name="year" type="number" min="1000" max="2100" class="form-control"
+           value="{{ form_data.get('year') if form_data else (book.year if book else '') }}"
+           placeholder="2024" required>
+  </div>
+  <div class="col-sm-6">
+    <label class="form-label" for="f_pages">Объём (стр.) <span class="text-danger">*</span></label>
+    <input id="f_pages" name="pages" type="number" min="1" class="form-control"
+           value="{{ form_data.get('pages') if form_data else (book.pages if book else '') }}"
+           placeholder="300" required>
+  </div>
+
+  {# Publisher #}
+  <div class="col-12">
+    <label class="form-label" for="f_publisher">Издательство <span class="text-danger">*</span></label>
+    <input id="f_publisher" name="publisher" type="text" class="form-control"
+           value="{{ form_data.get('publisher') if form_data else (book.publisher if book else '') }}"
+           placeholder="Название издательства" required>
+  </div>
+
+  {# Genres multiselect #}
+  <div class="col-12">
+    <label class="form-label" for="f_genres">Жанры <span class="text-danger">*</span></label>
+    <select id="f_genres" name="genres" multiple class="form-select" required style="height:160px">
+      {% for genre in genres %}
+      <option value="{{ genre.id }}"
+        {% if genre.id|string in selected_genre_ids %}selected{% endif %}>
+        {{ genre.name }}
+      </option>
+      {% endfor %}
+    </select>
+    <div class="form-text">Удерживайте <kbd>Ctrl</kbd> (⌘ на Mac) для выбора нескольких жанров</div>
+  </div>
+
+  {# Description (EasyMDE) #}
+  <div class="col-12">
+    <label class="form-label" for="f_description">Краткое описание <span class="text-danger">*</span></label>
+    <textarea id="f_description" name="description" class="form-control easymde"
+              placeholder="Описание в формате Markdown...">{{ form_data.get('description') if form_data else (book.description if book else '') }}</textarea>
+    <div class="form-text">Поддерживается форматирование <strong>Markdown</strong></div>
+  </div>
+
+  {# Cover — only on add page #}
+  {% if show_cover %}
+  <div class="col-12">
+    <label class="form-label" for="f_cover">Обложка <span class="text-danger">*</span></label>
+    <input id="f_cover" name="cover" type="file" class="form-control" accept="image/*" required>
+    <div class="form-text">JPG, PNG, GIF, WEBP — максимум 16 МБ</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endmacro %}

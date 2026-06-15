@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% from 'books/_form_macro.html' import book_form %}
+{% block title %}Редактировать — {{ book.title }}{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}" class="text-purple-light">Главная</a></li>
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('books.view', book_id=book.id) }}" class="text-purple-light">{{ book.title }}</a>
+    </li>
+    <li class="breadcrumb-item active text-secondary">Редактировать</li>
+  </ol>
+</nav>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card border-0">
+      <div class="card-header d-flex align-items-center gap-2 py-3">
+        <i class="bi bi-pencil-square text-purple" style="font-size:1.2rem"></i>
+        <span class="fw-bold text-white" style="font-family:'Playfair Display',serif;font-size:1.1rem">
+          Редактирование книги
+        </span>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" action="{{ url_for('books.edit', book_id=book.id) }}" novalidate>
+          {{ book_form(genres, selected_genre_ids, form_data, book=book, show_cover=False) }}
+          <hr class="border-secondary my-4">
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-purple">
+              <i class="bi bi-floppy me-1"></i>Сохранить изменения
+            </button>
+            <a href="{{ url_for('books.view', book_id=book.id) }}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-lg me-1"></i>Отмена
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

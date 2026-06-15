@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+library.db
+gen*.py
+add_covers*.py
+inject_local_covers.py
+force_update_covers.py
